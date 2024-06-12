@@ -1,0 +1,107 @@
+AWSTemplateFormatVersion: "2010-09-09"
+
+Parameters:
+  Bucket:
+    Description: CodePipeline Artifact S3 bucket
+    Type: String
+  Repository:
+    Description: Git Repository
+    Type: String
+  Branch:
+    Type: String
+    Description: Branch name
+    Default: "develop"
+  CodeBuildRoleArn:
+    Description: CodeBuild role ARN
+    Type: String
+
+Resources:
+  DevDeployment:
+    Type: AWS::CodeBuild::Project
+    Properties:
+      Name: !Sub ${Repository}-dev-deploy
+      Description: !Sub Dev deploy project of ${Repository}
+      ServiceRole: !Ref CodeBuildRoleArn
+      Artifacts:
+        Type: CODEPIPELINE
+      Environment:
+        Type: LINUX_CONTAINER
+        ComputeType: BUILD_GENERAL1_SMALL
+        Image: aws/codebuild/standard:5.0
+        PrivilegedMode: true
+        EnvironmentVariables:
+          - Name: ENVIRONMENT
+            Type: PLAINTEXT
+            Value: dev
+      VpcConfig:
+        VpcId: vpc-xxxx
+        Subnets:
+          - subnet-xxxx
+          - subnet-xxxx
+          - subnet-xxxx
+          - subnet-xxxx
+        SecurityGroupIds:
+          - sg-xxxx
+      Source:
+        Type: CODEPIPELINE
+        BuildSpec: "buildspecs/deployspec.yml"
+
+  StageDeployment:
+    Type: AWS::CodeBuild::Project
+    Properties:
+      Name: !Sub ${Repository}-stage-deploy
+      Description: !Sub Stage deploy project of ${Repository}
+      ServiceRole: !Ref CodeBuildRoleArn
+      Artifacts:
+        Type: CODEPIPELINE
+      Environment:
+        Type: LINUX_CONTAINER
+        ComputeType: BUILD_GENERAL1_SMALL
+        Image: aws/codebuild/standard:5.0
+        PrivilegedMode: true
+        EnvironmentVariables:
+          - Name: ENVIRONMENT
+            Type: PLAINTEXT
+            Value: stage
+      VpcConfig:
+        VpcId: vpc-xxxx
+        Subnets:
+          - subnet-xxxx
+          - subnet-xxxx
+          - subnet-xxxx
+          - subnet-xxxx
+        SecurityGroupIds:
+          - sg-xxxx
+      Source:
+        Type: CODEPIPELINE
+        BuildSpec: "buildspecs/deployspec.yml"
+
+  ProdDeployment:
+    Type: AWS::CodeBuild::Project
+    Properties:
+      Name: !Sub ${Repository}-prod-deploy
+      Description: !Sub Prod deploy project of ${Repository}
+      ServiceRole: !Ref CodeBuildRoleArn
+      Artifacts:
+        Type: CODEPIPELINE
+      Environment:
+        Type: LINUX_CONTAINER
+        ComputeType: BUILD_GENERAL1_SMALL
+        Image: aws/codebuild/standard:5.0
+        PrivilegedMode: true
+        EnvironmentVariables:
+          - Name: ENVIRONMENT
+            Type: PLAINTEXT
+            Value: prod
+      VpcConfig:
+        VpcId: vpc-xxxx
+        Subnets:
+          - subnet-xxxx
+          - subnet-xxxx
+          - subnet-xxxx
+          - subnet-xxxx
+        SecurityGroupIds:
+          - sg-xxxx
+      Source:
+        Type: CODEPIPELINE
+        BuildSpec: "buildspecs/deployspec.yml"

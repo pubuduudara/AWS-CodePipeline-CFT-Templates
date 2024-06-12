@@ -1,0 +1,10 @@
+[
+  {
+    "ParameterKey": "GithubRepository",
+    "ParameterValue": "vidavu-frontend"
+  },
+  {
+    "ParameterKey": "DevBranch",
+    "ParameterValue": "pipeline-integration"
+  }
+]

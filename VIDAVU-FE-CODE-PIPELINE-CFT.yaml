@@ -1,0 +1,166 @@
+AWSTemplateFormatVersion: "2010-09-09"
+Description: Cloudformation template for FE deployment
+Parameters:
+  GithubRepository:
+    Type: String
+    Description: Repository name
+  DevBranch:
+    Type: String
+    Description: Branch name
+    Default: "develop"
+  ArtifactBucket:
+    Type: String
+    Description: S3 bucket name
+    Default: "vidavu-pipeline-artifacts"
+  ApplicationName:
+    Type: String
+    Description: Application name
+
+Resources:
+  CloudFormationRole:
+    Type: "AWS::IAM::Role"
+    Properties:
+      RoleName: !Sub ${GithubRepository}-CodePipeline-CFRole
+      Path: /
+      AssumeRolePolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: "Allow"
+            Principal:
+              Service:
+                - "cloudformation.amazonaws.com"
+            Action:
+              - "sts:AssumeRole"
+      Policies:
+        - PolicyName: !Sub vidavu-${GithubRepository}-CodePipeline-CloudFormationPolicy
+          PolicyDocument:
+            Version: "2012-10-17"
+            Statement:
+              - Effect: "Allow"
+                Action:
+                  - "iam:PassRole"
+                Resource: !Sub arn:aws:iam::${AWS::AccountId}:role/${GithubRepository}-*
+              - Effect: "Allow"
+                Action:
+                  - "cloudformation:CreateChangeSet"
+                  - "cloudformation:DeleteChangeSet"
+                  - "cloudformation:CreateStack"
+                  - "cloudformation:CreateUploadBucket"
+                  - "cloudformation:DeleteStack"
+                  - "cloudformation:Describe*"
+                  - "cloudformation:List*"
+                  - "cloudformation:UpdateStack"
+                  - "cloudformation:ValidateTemplate"
+                  - "cloudformation:ExecuteChangeSet"
+                Resource:
+                  - arn:aws:cloudformation:us-east-1:aws:transform/Serverless-2016-10-31
+                  - !Sub arn:aws:cloudformation:${AWS::Region}:${AWS::AccountId}:stack/${GithubRepository}*
+
+  CodePipelineRole:
+    Type: "AWS::IAM::Role"
+    Properties:
+      RoleName: !Sub ${GithubRepository}-CodePipelineRole
+      Path: /
+      AssumeRolePolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: "Allow"
+            Principal:
+              Service:
+                - "codepipeline.amazonaws.com"
+            Action:
+              - "sts:AssumeRole"
+      ManagedPolicyArns:
+        - arn:aws:iam::aws:policy/AmazonS3FullAccess
+        - arn:aws:iam::aws:policy/AmazonVPCFullAccess
+
+      Policies:
+        - PolicyName: !Sub ${GithubRepository}-CodePipelinePolicy
+          PolicyDocument:
+            Version: "2012-10-17"
+            Statement:
+              - Effect: "Allow"
+                Action:
+                  - "s3:GetObject"
+                  - "s3:GetObjectVersion"
+                  - "s3:PutObject"
+                  - "s3:GetBucketVersioning"
+                Resource: !Sub arn:aws:s3:::*
+              - Effect: "Allow"
+                Action:
+                  - "codebuild:StartBuild"
+                  - "codebuild:BatchGetBuilds"
+                Resource: !Sub arn:aws:codebuild:${AWS::Region}:${AWS::AccountId}:project/${GithubRepository}*
+              - Effect: "Allow"
+                Action:
+                  - "iam:PassRole"
+                Resource: !Sub arn:aws:iam::${AWS::AccountId}:role/${GithubRepository}-*
+
+  CodeBuildRole:
+    Type: "AWS::IAM::Role"
+    Properties:
+      RoleName: !Sub ${GithubRepository}-CodeBuildRole
+      Path: /service-role/
+      AssumeRolePolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: "Allow"
+            Principal:
+              Service:
+                - "codebuild.amazonaws.com"
+            Action:
+              - "sts:AssumeRole"
+      ManagedPolicyArns:
+        - arn:aws:iam::aws:policy/IAMFullAccess
+        - arn:aws:iam::aws:policy/AmazonVPCFullAccess
+        - arn:aws:iam::aws:policy/AWSCloudFormationFullAccess # for deployment
+        - arn:aws:iam::aws:policy/AmazonS3FullAccess
+        - arn:aws:iam::aws:policy/CloudFrontFullAccess
+
+      Policies:
+        - PolicyName: !Sub ${GithubRepository}-CodePipeline-CodeBuildPolicy
+          PolicyDocument:
+            Version: "2012-10-17"
+            Statement:
+              - Effect: "Allow"
+                Action:
+                  - "logs:CreateLogGroup"
+                  - "logs:CreateLogStream"
+                  - "logs:PutLogEvents"
+                Resource: !Sub arn:aws:logs:${AWS::Region}:${AWS::AccountId}:log-group:/aws/*
+              - Effect: "Allow"
+                Action: "*"
+                Resource: !Sub arn:aws:s3:::*
+              - Effect: "Allow"
+                Action:
+                  - "secretsmanager:GetSecretValue"
+                Resource:
+                  - "*"
+
+  CodeBuild:
+    Type: AWS::CloudFormation::Stack
+    Properties:
+      TemplateURL: https://vidavu-cloudformation-templates.s3.amazonaws.com/vidavu_codebuild_template.yaml
+      Parameters:
+        Bucket: !Sub ${ArtifactBucket}
+        Repository: !Sub ${GithubRepository}
+        Branch: !Sub ${DevBranch}
+        CodeBuildRoleArn:
+          Fn::GetAtt: [CodeBuildRole, Arn]
+      Tags:
+        - Key: APP
+          Value: !Ref ApplicationName
+
+  CodePipeLine:
+    Type: AWS::CloudFormation::Stack
+    Properties:
+      TemplateURL: https://vidavu-cloudformation-templates.s3.amazonaws.com/vidavu_codepipeline_template.yaml
+      Parameters:
+        Bucket: !Sub ${ArtifactBucket}
+        Repository: !Sub ${GithubRepository}
+        Branch: !Sub ${DevBranch}
+        CodePipelineRole:
+          Fn::GetAtt: [CodePipelineRole, Arn]
+      Tags:
+        - Key: APP
+          Value: !Ref ApplicationName

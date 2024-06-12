@@ -1,0 +1,14 @@
+[
+  {
+    "ParameterKey": "ApplicationName",
+    "ParameterValue": "CHAMPION"
+  },
+  {
+    "ParameterKey": "GithubRepository",
+    "ParameterValue": "champion-admin-frontend"
+  },
+  {
+    "ParameterKey": "DevBranch",
+    "ParameterValue": "main"
+  }
+]

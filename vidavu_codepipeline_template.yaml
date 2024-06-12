@@ -1,0 +1,93 @@
+AWSTemplateFormatVersion: "2010-09-09"
+Parameters:
+  Bucket:
+    Description: CodePipeline Bucket
+    Type: String
+  CodePipelineRole:
+    Description: CodePipeline role ARN
+    Type: String
+  Branch:
+    Type: String
+    Description: Branch name
+    Default: "develop"
+  Repository:
+    Type: String
+    Description: Repo name
+
+Resources:
+  DeployPipeline:
+    Type: AWS::CodePipeline::Pipeline
+    Properties:
+      Name: !Sub ${Repository}-pipeline
+      RoleArn: !Ref CodePipelineRole
+      Stages:
+        - Name: Source
+          Actions:
+            - Name: !Sub ${Repository}-source
+              ActionTypeId:
+                Category: Source
+                Owner: ThirdParty
+                Version: 1
+                Provider: GitHub
+              Configuration:
+                Owner: vidavu
+                Repo: !Sub ${Repository}
+                Branch: !Sub ${Branch}
+                PollForSourceChanges: true
+                OAuthToken: >-
+                  {{resolve:secretsmanager:GITHUB_ACCESS:SecretString:GITHUB_ACCESS_TOKEN}}
+              OutputArtifacts:
+                - Name: !Sub ${Repository}-source-artifact
+              RunOrder: 1
+
+        #TODO move this to down
+
+        # - Name: StageDeployApproval
+        #   Actions:
+        #     - Name: ApproveDeployment
+        #       ActionTypeId:
+        #         Category: Approval
+        #         Owner: AWS
+        #         Version: 1
+        #         Provider: Manual
+
+        - Name: StageDeploy
+          Actions:
+            - Name: !Sub ${Repository}-stage-deploy
+              InputArtifacts:
+                - Name: !Sub ${Repository}-source-artifact
+              ActionTypeId:
+                Category: Build
+                Owner: AWS
+                Version: 1
+                Provider: CodeBuild
+              Configuration:
+                ProjectName: !Sub ${Repository}-stage-deploy
+              RunOrder: 1
+
+        - Name: ProdDeployApproval
+          Actions:
+            - Name: ApproveDeployment
+              ActionTypeId:
+                Category: Approval
+                Owner: AWS
+                Version: 1
+                Provider: Manual
+
+        - Name: ProdDeploy
+          Actions:
+            - Name: !Sub ${Repository}-prod-deploy
+              InputArtifacts:
+                - Name: !Sub ${Repository}-source-artifact
+              ActionTypeId:
+                Category: Build
+                Owner: AWS
+                Version: 1
+                Provider: CodeBuild
+              Configuration:
+                ProjectName: !Sub ${Repository}-prod-deploy
+              RunOrder: 1
+
+      ArtifactStore:
+        Type: S3
+        Location: !Ref Bucket
