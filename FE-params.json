@@ -1,14 +1,14 @@
 [
   {
     "ParameterKey": "ApplicationName",
-    "ParameterValue": "CHAMPION"
+    "ParameterValue": "APP"
   },
   {
     "ParameterKey": "GithubRepository",
-    "ParameterValue": "vidavu-frontend-v2"
+    "ParameterValue": "Repo Name"
   },
   {
     "ParameterKey": "DevBranch",
-    "ParameterValue": "pipeline-integration"
+    "ParameterValue": "main"
   }
 ]

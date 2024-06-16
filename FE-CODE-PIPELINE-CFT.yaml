@@ -11,7 +11,7 @@ Parameters:
   ArtifactBucket:
     Type: String
     Description: S3 bucket name
-    Default: "vidavu-pipeline-artifacts"
+    Default: "pipeline-artifacts"
   ApplicationName:
     Type: String
     Description: Application name
@@ -32,7 +32,7 @@ Resources:
             Action:
               - "sts:AssumeRole"
       Policies:
-        - PolicyName: !Sub vidavu-${GithubRepository}-CodePipeline-CloudFormationPolicy
+        - PolicyName: !Sub APP-${GithubRepository}-CodePipeline-CloudFormationPolicy
           PolicyDocument:
             Version: "2012-10-17"
             Statement:
@@ -140,7 +140,7 @@ Resources:
   CodeBuild:
     Type: AWS::CloudFormation::Stack
     Properties:
-      TemplateURL: https://vidavu-cloudformation-templates.s3.amazonaws.com/vidavu_codebuild_template.yaml
+      TemplateURL: https://APP-cloudformation-templates.s3.amazonaws.com/codebuild_template.yaml
       Parameters:
         Bucket: !Sub ${ArtifactBucket}
         Repository: !Sub ${GithubRepository}
@@ -154,7 +154,7 @@ Resources:
   CodePipeLine:
     Type: AWS::CloudFormation::Stack
     Properties:
-      TemplateURL: https://vidavu-cloudformation-templates.s3.amazonaws.com/vidavu_codepipeline_template.yaml
+      TemplateURL: https://APP-cloudformation-templates.s3.amazonaws.com/codepipeline_template.yaml
       Parameters:
         Bucket: !Sub ${ArtifactBucket}
         Repository: !Sub ${GithubRepository}

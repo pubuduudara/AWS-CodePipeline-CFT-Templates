@@ -30,7 +30,7 @@ Resources:
                 Version: 1
                 Provider: GitHub
               Configuration:
-                Owner: vidavu
+                Owner: owner
                 Repo: !Sub ${Repository}
                 Branch: !Sub ${Branch}
                 PollForSourceChanges: true
